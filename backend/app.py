@@ -20,7 +20,7 @@ def create_app():
 
     db.init_app(app)
     JWTManager(app)
-    CORS(app, origins=['http://localhost:5001', 'http://127.0.0.1:5001'], supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
     from routes.auth    import auth_bp
     from routes.admin   import admin_bp
@@ -70,8 +70,11 @@ def init_db(app):
         db.session.commit()
 
 
+# Module-level instance for Gunicorn
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     init_db(app)
     debug = os.environ.get('FLASK_DEBUG', 'true').lower() == 'true'
-    app.run(debug=debug, port=5001)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(debug=debug, host='0.0.0.0', port=port)
