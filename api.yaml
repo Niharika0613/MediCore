@@ -1,0 +1,777 @@
+openapi: 3.0.0
+info:
+  title: MediCore API
+  description: Healthcare management system API for patients, doctors, and administrators
+  version: 1.0.0
+  contact:
+    name: MediCore Support
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - name
+        - email
+        - password
+      properties:
+        username:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 6
+        phone:
+          type: string
+        birth_date:
+          type: string
+          format: date
+        gender:
+          type: string
+        blood_type:
+          type: string
+        location:
+          type: string
+
+    BookingRequest:
+      type: object
+      required:
+        - date
+        - time
+      properties:
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          enum: ['09:00 AM','10:00 AM','11:00 AM','12:00 PM','02:00 PM','03:00 PM','04:00 PM','05:00 PM']
+        reason:
+          type: string
+
+    PaymentRequest:
+      type: object
+      required:
+        - payment_method
+        - amount
+      properties:
+        payment_method:
+          type: string
+          enum: [card, upi]
+        amount:
+          type: number
+        booking_id:
+          type: integer
+        card_number:
+          type: string
+        expiry:
+          type: string
+        cvv:
+          type: string
+        upi_id:
+          type: string
+
+    CaseNoteRequest:
+      type: object
+      required:
+        - condition
+        - treatment
+      properties:
+        condition:
+          type: string
+        treatment:
+          type: string
+        remarks:
+          type: string
+        booking_id:
+          type: integer
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: object
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new patient
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user info
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+        '404':
+          description: User not found
+
+  /patient/profile:
+    get:
+      tags:
+        - Patient
+      summary: Get patient profile
+      responses:
+        '200':
+          description: Patient profile
+    put:
+      tags:
+        - Patient
+      summary: Update patient profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                gender:
+                  type: string
+                blood_type:
+                  type: string
+                location:
+                  type: string
+                birth_date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Profile updated
+
+  /patient/physicians:
+    get:
+      tags:
+        - Patient
+      summary: Search physicians
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search query
+      responses:
+        '200':
+          description: List of physicians
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /patient/bookings:
+    get:
+      tags:
+        - Patient
+      summary: Get patient bookings
+      responses:
+        '200':
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /patient/bookings/{pid}:
+    post:
+      tags:
+        - Patient
+      summary: Book appointment with physician
+      parameters:
+        - name: pid
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '201':
+          description: Booking created
+        '400':
+          description: Invalid request
+        '409':
+          description: Time slot already booked
+
+  /patient/bookings/{id}/cancel:
+    put:
+      tags:
+        - Patient
+      summary: Cancel booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking cancelled
+        '403':
+          description: Unauthorized
+
+  /patient/notes:
+    get:
+      tags:
+        - Patient
+      summary: Get patient case notes
+      responses:
+        '200':
+          description: List of case notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /patient/payments:
+    post:
+      tags:
+        - Patient
+      summary: Process payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '201':
+          description: Payment processed
+        '400':
+          description: Invalid payment details
+
+  /patient/download-csv:
+    post:
+      tags:
+        - Patient
+      summary: Export patient data to CSV
+      responses:
+        '200':
+          description: Export task started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  message:
+                    type: string
+
+  /patient/task/{task_id}:
+    get:
+      tags:
+        - Patient
+      summary: Check export task status
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task status
+
+  /doctor/profile:
+    get:
+      tags:
+        - Doctor
+      summary: Get doctor profile
+      responses:
+        '200':
+          description: Doctor profile
+        '404':
+          description: Profile not found
+    put:
+      tags:
+        - Doctor
+      summary: Update doctor profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                expertise:
+                  type: string
+                years_exp:
+                  type: integer
+                consult_fee:
+                  type: number
+                schedule_text:
+                  type: string
+                about:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+
+  /doctor/bookings:
+    get:
+      tags:
+        - Doctor
+      summary: Get doctor bookings
+      responses:
+        '200':
+          description: List of bookings
+
+  /doctor/bookings/{id}/approve:
+    put:
+      tags:
+        - Doctor
+      summary: Approve booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking approved
+        '403':
+          description: Unauthorized
+
+  /doctor/bookings/{id}/complete:
+    put:
+      tags:
+        - Doctor
+      summary: Mark booking as completed
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking completed
+
+  /doctor/bookings/{id}/cancel:
+    put:
+      tags:
+        - Doctor
+      summary: Cancel booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Booking cancelled
+
+  /doctor/clients:
+    get:
+      tags:
+        - Doctor
+      summary: Get doctor's clients
+      responses:
+        '200':
+          description: List of clients
+
+  /doctor/notes:
+    get:
+      tags:
+        - Doctor
+      summary: Get all case notes
+      responses:
+        '200':
+          description: List of case notes
+
+  /doctor/notes/{cid}:
+    post:
+      tags:
+        - Doctor
+      summary: Add case note for client
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseNoteRequest'
+      responses:
+        '201':
+          description: Note added
+        '400':
+          description: Missing required fields
+
+  /doctor/schedule:
+    get:
+      tags:
+        - Doctor
+      summary: Get doctor schedule (7 days)
+      responses:
+        '200':
+          description: Schedule for next 7 days
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    is_open:
+                      type: boolean
+    post:
+      tags:
+        - Doctor
+      summary: Update doctor schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  is_open:
+                    type: boolean
+      responses:
+        '200':
+          description: Schedule updated
+
+  /admin/overview:
+    get:
+      tags:
+        - Admin
+      summary: Get system overview statistics
+      responses:
+        '200':
+          description: Overview statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  physicians:
+                    type: integer
+                  clients:
+                    type: integer
+                  bookings:
+                    type: integer
+                  pending:
+                    type: integer
+                  approved:
+                    type: integer
+                  completed:
+                    type: integer
+                  cancelled:
+                    type: integer
+                  divisions:
+                    type: integer
+
+  /admin/reports/monthly:
+    get:
+      tags:
+        - Admin
+      summary: Get monthly report
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: integer
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Monthly report data
+
+  /admin/physicians:
+    get:
+      tags:
+        - Admin
+      summary: Get all physicians
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of physicians
+    post:
+      tags:
+        - Admin
+      summary: Add new physician
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - name
+                - email
+                - password
+                - expertise
+              properties:
+                username:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+                expertise:
+                  type: string
+                years_exp:
+                  type: integer
+                consult_fee:
+                  type: number
+                schedule_text:
+                  type: string
+                division_id:
+                  type: integer
+                about:
+                  type: string
+      responses:
+        '201':
+          description: Physician added
+        '400':
+          description: Validation error
+
+  /admin/physicians/{id}:
+    put:
+      tags:
+        - Admin
+      summary: Update physician
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Physician updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete physician
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Physician deleted
+
+  /admin/clients:
+    get:
+      tags:
+        - Admin
+      summary: Get all clients
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of clients
+    post:
+      tags:
+        - Admin
+      summary: Add new client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - name
+                - email
+                - password
+      responses:
+        '201':
+          description: Client added
+
+  /admin/clients/{id}:
+    get:
+      tags:
+        - Admin
+      summary: View client details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Client details with bookings and notes
+    put:
+      tags:
+        - Admin
+      summary: Update client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Client updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Client deleted
+
+  /admin/bookings:
+    get:
+      tags:
+        - Admin
+      summary: Get all bookings
+      responses:
+        '200':
+          description: List of all bookings
+
+  /admin/divisions:
+    get:
+      tags:
+        - Admin
+      summary: Get all divisions
+      responses:
+        '200':
+          description: List of divisions

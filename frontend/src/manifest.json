@@ -1,0 +1,9 @@
+{
+  "name": "MediCore",
+  "short_name": "MediCore",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#E23744",
+  "background_color": "#FFFFFF",
+  "icons": []
+}

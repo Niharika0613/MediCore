@@ -1,0 +1,34 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Flask / SQLite
+instance/
+*.db
+*.sqlite3
+
+# Environment secrets
+.env
+
+# Generated output (runtime files)
+exports/
+reports/
+backend/exports/
+backend/reports/
+
+# Flask static mirror (auto-served from frontend/src)
+static/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+credentials.json
+backend/credentials.json
